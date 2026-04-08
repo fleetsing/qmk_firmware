@@ -311,6 +311,9 @@ void matrix_init_kb(void) {
 void charybdis_config_sync_handler(uint8_t initiator2target_buffer_size, const void* initiator2target_buffer, uint8_t target2initiator_buffer_size, void* target2initiator_buffer) {
     if (initiator2target_buffer_size == sizeof(g_charybdis_config)) {
         memcpy(&g_charybdis_config, initiator2target_buffer, sizeof(g_charybdis_config));
+        // Reapply CPI on the receiving half so synced sniping/drag-scroll state
+        // affects the active sensor even when it is not on the master side.
+        maybe_update_pointing_device_cpi(&g_charybdis_config);
     }
 }
 #    endif
