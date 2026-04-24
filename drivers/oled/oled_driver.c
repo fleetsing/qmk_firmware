@@ -116,7 +116,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #define OLED_ALL_BLOCKS_MASK (((((OLED_BLOCK_TYPE)1 << (OLED_BLOCK_COUNT - 1)) - 1) << 1) | 1)
 
-#define OLED_IC_HAS_HORIZONTAL_MODE (OLED_IC == OLED_IC_SSD1306)
+#define OLED_IC_HAS_HORIZONTAL_MODE (OLED_IC == OLED_IC_SSD1306 || OLED_IC == OLED_IC_SSD1312)
 #define OLED_IC_COM_PINS_ARE_COLUMNS (OLED_IC == OLED_IC_SH1107)
 
 #ifndef OLED_COM_PIN_COUNT
@@ -126,6 +126,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #        define OLED_COM_PIN_COUNT 64
 #    elif OLED_IC == OLED_IC_SH1107
 #        define OLED_COM_PIN_COUNT 128
+#    elif OLED_IC == OLED_IC_SSD1312
+#        define OLED_COM_PIN_COUNT 64
 #    else
 #        error Invalid OLED_IC value
 #    endif
@@ -133,6 +135,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 #ifndef OLED_COM_PIN_OFFSET
 #    define OLED_COM_PIN_OFFSET 0
+#endif
+
+#ifndef OLED_CHARGE_PUMP_VALUE
+#    if OLED_IC == OLED_IC_SSD1306
+#        define OLED_CHARGE_PUMP_VALUE 0x14
+#    elif OLED_IC == OLED_IC_SSD1312
+/* SSD1312 uses a different charge-pump control value than SSD1306. */
+#        define OLED_CHARGE_PUMP_VALUE 0x12
+#    else
+#        define OLED_CHARGE_PUMP_VALUE 0x14
+#    endif
 #endif
 
 // i2c defines
@@ -312,7 +325,7 @@ bool oled_init(oled_rotation_t rotation) {
 #else
         DISPLAY_START_LINE | 0x00,
 #endif
-        CHARGE_PUMP, 0x14,
+        CHARGE_PUMP, OLED_CHARGE_PUMP_VALUE,
 #if OLED_IC_HAS_HORIZONTAL_MODE
         // MEMORY_MODE is unsupported on SH1106 (Page Addressing only)
         MEMORY_MODE,
@@ -442,6 +455,25 @@ static void rotate_90(const uint8_t *src, uint8_t *dest) {
     }
 }
 
+static void rotate_270(const uint8_t *src, uint8_t *dest) {
+    for (uint8_t i = 0; i < 8; ++i) {
+        uint8_t selector = (1 << i);
+        for (uint8_t j = 0; j < 8; ++j) {
+            dest[7 - i] |= crot(src[j] & selector, (int8_t)j - (int8_t)i);
+        }
+    }
+}
+
+#if OLED_IC == OLED_IC_SSD1312
+/*
+ * The SSD1312-compatible 1.5" modules used on this board follow the standard
+ * 128x64 source chunk order, but their 90-degree rotated output wants the
+ * rotated 8x8 tiles written left-to-right instead of the default reversed
+ * target order used by QMK's generic 128x64 mapping.
+ */
+static const uint8_t ssd1312_rotation_90_target_map[] = {0, 8, 16, 24, 32, 40, 48, 56};
+#endif
+
 void oled_render_dirty(bool all) {
     // Do we have work to do?
     oled_dirty &= OLED_ALL_BLOCKS_MASK;
@@ -487,12 +519,37 @@ void oled_render_dirty(bool all) {
         } else {
             // Rotate the render chunks
             const static uint8_t source_map[] = OLED_SOURCE_MAP;
+#if OLED_IC == OLED_IC_SSD1312
+            const static uint8_t default_target_map[] = OLED_TARGET_MAP;
+            const uint8_t       *target_map =
+                (oled_rotation == OLED_ROTATION_90) ? ssd1312_rotation_90_target_map : default_target_map;
+#else
             const static uint8_t target_map[] = OLED_TARGET_MAP;
+#endif
 
             static uint8_t temp_buffer[OLED_BLOCK_SIZE];
             memset(temp_buffer, 0, sizeof(temp_buffer));
             for (uint8_t i = 0; i < sizeof(source_map); ++i) {
+#if OLED_IC == OLED_IC_SSD1312
+                if (oled_rotation == OLED_ROTATION_90) {
+                    /*
+                     * The SSD1312 replacement modules on this build want the
+                     * 8x8 tiles rotated the opposite direction from QMK's
+                     * generic 128x64 OLED path, even after the tile order is
+                     * corrected. These panels also expect the rotated tile's
+                     * byte rows in the opposite vertical order.
+                     */
+                    uint8_t tile_buffer[8] = {0};
+                    rotate_270(&oled_buffer[OLED_BLOCK_SIZE * update_start + source_map[i]], tile_buffer);
+                    for (uint8_t j = 0; j < ARRAY_SIZE(tile_buffer); ++j) {
+                        temp_buffer[target_map[i] + j] = tile_buffer[ARRAY_SIZE(tile_buffer) - 1 - j];
+                    }
+                } else {
+                    rotate_90(&oled_buffer[OLED_BLOCK_SIZE * update_start + source_map[i]], &temp_buffer[target_map[i]]);
+                }
+#else
                 rotate_90(&oled_buffer[OLED_BLOCK_SIZE * update_start + source_map[i]], &temp_buffer[target_map[i]]);
+#endif
             }
 
 #if OLED_IC_HAS_HORIZONTAL_MODE

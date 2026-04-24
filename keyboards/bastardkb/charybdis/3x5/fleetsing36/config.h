@@ -8,4 +8,10 @@
  */
 #define EE_HANDS
 
+/* Left-half encoder reuses the former trackball SCLK + MISO lines. */
+#define ENCODER_A_PINS { B1 }
+#define ENCODER_B_PINS { B3 }
+#define ENCODER_A_PINS_RIGHT { }
+#define ENCODER_B_PINS_RIGHT { }
+
 #define POINTING_DEVICE_CS_PIN F0
