@@ -469,7 +469,8 @@ static void rotate_270(const uint8_t *src, uint8_t *dest) {
  * The SSD1312-compatible 1.5" modules used on this board follow the standard
  * 128x64 source chunk order, but their 90-degree rotated output wants the
  * rotated 8x8 tiles written left-to-right instead of the default reversed
- * target order used by QMK's generic 128x64 mapping.
+ * target order used by QMK's generic 128x64 mapping. This path was validated
+ * against the replacement 4-pin modules documented in the workspace pin map.
  */
 static const uint8_t ssd1312_rotation_90_target_map[] = {0, 8, 16, 24, 32, 40, 48, 56};
 #endif
@@ -537,7 +538,10 @@ void oled_render_dirty(bool all) {
                      * 8x8 tiles rotated the opposite direction from QMK's
                      * generic 128x64 OLED path, even after the tile order is
                      * corrected. These panels also expect the rotated tile's
-                     * byte rows in the opposite vertical order.
+                     * byte rows in the opposite vertical order. The result is
+                     * correct for the replacement 4-pin modules documented in
+                     * the workspace pin map and may not generalize to every
+                     * SSD1312 board sold under similar listings.
                      */
                     uint8_t tile_buffer[8] = {0};
                     rotate_270(&oled_buffer[OLED_BLOCK_SIZE * update_start + source_map[i]], tile_buffer);
