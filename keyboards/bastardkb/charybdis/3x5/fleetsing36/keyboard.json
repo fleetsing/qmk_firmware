@@ -9,6 +9,9 @@
         "rows": ["F7", "C6", "D4", "B5"]
     },
     "pin_compatible": "elite_c",
+    "features": {
+        "rgb_matrix": false
+    },
     "split": {
         "serial": {
             "pin": "D2"
