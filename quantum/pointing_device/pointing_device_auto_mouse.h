@@ -83,6 +83,7 @@ void          set_auto_mouse_debounce(uint8_t debounce);                // set d
 uint8_t       get_auto_mouse_debounce(void);                            // get debounce
 void          set_auto_mouse_key_tracker(int8_t key_tracker);           // set key tracker
 int8_t        get_auto_mouse_key_tracker(void);                         // get key tracker
+uint16_t      get_auto_mouse_remaining(void);                           // get remaining target layer timeout
 void          auto_mouse_layer_off(void);                               // disable target layer if appropriate (DO NOT USE in layer_state_set stack!!)
 layer_state_t remove_auto_mouse_layer(layer_state_t state, bool force); // remove auto mouse target layer from state if appropriate (can be forced)
 bool          is_auto_mouse_active(void);                               // check if target layer is active
@@ -96,12 +97,12 @@ void auto_mouse_toggle(void);                // toggle mouse layer flag disables
 bool get_auto_mouse_toggle(void);            // get toggle mouse layer flag value
 
 /* ----------Callbacks for adding keycodes to mouse record checking------------------------------------------ */
-bool is_mouse_record_kb(uint16_t keycode, keyrecord_t* record);
-bool is_mouse_record_user(uint16_t keycode, keyrecord_t* record);
+bool is_mouse_record_kb(uint16_t keycode, keyrecord_t *record);
+bool is_mouse_record_user(uint16_t keycode, keyrecord_t *record);
 
 /* ----------Core functions (only used in custom pointing devices or key processing)------------------------- */
 void pointing_device_task_auto_mouse(report_mouse_t mouse_report); // add to pointing_device_task_*
-bool process_auto_mouse(uint16_t keycode, keyrecord_t* record);    // add to process_record_*
+bool process_auto_mouse(uint16_t keycode, keyrecord_t *record);    // add to process_record_*
 
 /* ----------Macros/Aliases---------------------------------------------------------------------------------- */
 #define AUTO_MOUSE_TARGET_LAYER get_auto_mouse_layer()
